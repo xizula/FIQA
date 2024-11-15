@@ -10,11 +10,7 @@ import numpy as np
 import torch
 from ellzaf_ml.models import GhostFaceNetsV2
 from torchvision.io import read_image
-
-
-
-        # return (e_i - e_j).norm().item()
-
+from numpy.linalg import norm
 
 class FaceNet:
     def __init__(self):
@@ -25,7 +21,11 @@ class FaceNet:
         return embedding.detach().cpu()
 
     def compute_similarities(self, e_i, e_j):
-        return np.linalg.norm(e_i - e_j) # 
+        squared_norms = np.sum(e_i**2, axis=1) 
+        dist_squared = squared_norms[:, None] + squared_norms[None, :] - 2 * (e_i @ e_i.T)
+        dist_squared = np.maximum(dist_squared, 0)
+        distances = np.sqrt(dist_squared)
+        return distances
 
 
 class ArcFace:
@@ -44,7 +44,7 @@ class ArcFace:
         return torch.tensor(emb)
 
     def compute_similarities(self, e_i, e_j):
-        return self.arcface_model.compute_sim(e_i, e_j)
+        return np.dot(e_i, e_j.T) / (norm(e_i) * norm(e_j)) *100
 
 class AdaFace:
     def __init__(self):
@@ -74,7 +74,7 @@ class GhostFaceNet:
         return self.model(images).detach().cpu().numpy()
 
     def compute_similarities(self, e_i, e_j):
-        return np.dot(e_i, e_j) / (np.linalg.norm(e_i) * np.linalg.norm(e_j))
+        return np.dot(e_i, e_j.T) / (np.linalg.norm(e_i) * np.linalg.norm(e_j))*100
 
 
 def load_model(name: str):
@@ -89,18 +89,3 @@ def load_model(name: str):
     else:
         raise ValueError(f'Model {name} not supported')
 
-
-
-
-# img1 = read_image('mgr_data/data_sample/0/0.jpg').float().cuda()
-# img2 = read_image('mgr_data/data_sample/0/3.jpg').float().cuda()
-# img3 = read_image('mgr_data/data_sample/1/110.jpg').float().cuda()
-# img4 = read_image('mgr_data/data_sample/1/111.jpg').float().cuda()
-
-
-# model = load_model('ghostfacenet')
-# e1 = model(img2.unsqueeze(0)).detach().cpu().numpy().squeeze()
-# e2 = model(img1.unsqueeze(0)).detach().cpu().numpy().squeeze()
-
-
-# print(model.compute_similarities(e1, e2))
