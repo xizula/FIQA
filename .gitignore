@@ -1,0 +1,7 @@
+mgr_data
+*.csv
+venv
+wvenv
+face_models/models/*
+*.onnx
+*.ipynb
