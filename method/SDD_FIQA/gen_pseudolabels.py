@@ -7,7 +7,6 @@ from tqdm import tqdm
 import random
 import ast
 
-from numba import jit, cuda 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(parent_dir)
 
@@ -71,8 +70,6 @@ def calculate_id_score(distances: dict) -> dict:
     idnames = set()
     keys = list(distances.keys())
     quality_scores = list(distances.values())
-    # print(distances)
-    # print(keys[0].split('\\'))
     for i in keys: idsocre_dist[i.split("\\")[-2]] = [0,0]
     
     quality_scores = (quality_scores - np.min(quality_scores)) / \
@@ -111,7 +108,7 @@ if __name__ == '__main__':
 
     qc = np.mean(qc, axis=0)
     qc_data = pd.DataFrame({'path': list(distances.keys()), 'quality': qc})
-    qc_data.to_csv('adaface_CasiaWebFace_small_quality.csv', index=False)
+    qc_data.to_csv('ghostfacenet_CasiaWebFace_small_quality.csv', index=False)
 
 
 

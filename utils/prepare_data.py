@@ -2,7 +2,7 @@ from pathlib import Path
 from facenet_pytorch import MTCNN
 from PIL import Image
 import cv2
-
+import argparse
 
 def delete_small_folders(root_folder, min_images=5):
     # Convert root folder to a Path object
@@ -56,7 +56,14 @@ def to_bgr(folder_path):
                     img = cv2.imread(str(image_path))
                     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
                     cv2.imwrite(str(image_path), img)
-path = r'D:\mgr\mgr_data\LFW'
-delete_small_folders(path)
-# crop_faces(path)
-to_bgr(path)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-p", "--path", help="path to the image dataset to preprocess")
+    parser.add_argument("-m", "--min_videos", help="minimum number of images to keep a folder", type=int, default=10)
+    args = parser.parse_args()
+
+    delete_small_folders(args.path, args.min_videos)
+    # crop_faces(args.path)
+    to_bgr(args.path)

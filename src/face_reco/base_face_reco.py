@@ -16,27 +16,32 @@ import numpy as np
 
 config = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 
-file_path = config['data']['test_embeddings']
-model_name = config['model']['embeddings']
+# file_path = config['data']['test_embeddings']
+# model_name = config['model']['embeddings']
+# 'mgr_data/embeddings/adaface_LFW_embeddings.csv'
+models = config['model']
+datasets = config['test_datasets']
+for dataset in tqdm(datasets):
+    for model_name in tqdm(models):
+        file_path = f"mgr_data/embeddings/{model_name}_{dataset}_embeddings.csv"
+        model = load_model(model_name)
+        df = pd.read_csv(file_path)
 
-model = load_model(model_name)
-df = pd.read_csv(file_path)
+        n_rows = len(df)
+        labels = df['label'].values
+        embeddings = df['embedding'].values
+        embeddings = np.array([np.array(ast.literal_eval(e)) for e in embeddings])
+        score = model.compute_similarities(embeddings, embeddings)
 
-n_rows = len(df)
-labels = df['label'].values
-embeddings = df['embedding'].values
-embeddings = np.array([np.array(ast.literal_eval(e)) for e in embeddings])
-score = model.compute_similarities(embeddings, embeddings)
+        labels_matrix = np.equal(labels[:, None], labels)
+        np.fill_diagonal(labels_matrix, False)
+        upper_triangle_indices = np.triu_indices_from(score, k=1)
+        class_labels = labels_matrix[upper_triangle_indices]
+        scores = score[upper_triangle_indices]
 
-labels_matrix = np.equal(labels[:, None], labels)
-np.fill_diagonal(labels_matrix, False)
-upper_triangle_indices = np.triu_indices_from(score, k=1)
-class_labels = labels_matrix[upper_triangle_indices]
-scores = score[upper_triangle_indices]
+        df = pd.DataFrame({
+            'label': class_labels.astype(int),
+            'score': scores
+        })
 
-df = pd.DataFrame({
-    'label': class_labels.astype(int),
-    'score': scores
-})
-
-df.to_csv(f'mgr_data/reco_scores/{model_name}_base_scores.csv', index=False)
+        df.to_csv(f'mgr_data/reco_scores/{model_name}_{dataset}_base_scores.csv', index=False)

@@ -11,13 +11,15 @@ import torch
 from ellzaf_ml.models import GhostFaceNetsV2
 from torchvision.io import read_image
 from numpy.linalg import norm
+import onnx
+from onnx2torch import convert
 
 class FaceNet:
     def __init__(self):
-        self.resnet = InceptionResnetV1(pretrained='vggface2').eval().to('cuda')
+        self.model = InceptionResnetV1(pretrained='vggface2').eval().to('cuda')
 
     def __call__(self, images):
-        embedding = self.resnet(images)
+        embedding = self.model(images)
         return embedding.detach().cpu()
 
     def compute_similarities(self, e_i, e_j):
@@ -48,15 +50,16 @@ class ArcFace:
 
 class AdaFace:
     def __init__(self):
-        self.adaface_model = onnxruntime.InferenceSession("face_models/models/adaface.onnx")
-        self.input_name = self.adaface_model.get_inputs()[0].name
-        self.output_name = self.adaface_model.get_outputs()[0].name
+        self.model_path = "face_models/models/adaface.onnx"
+        self.model = onnxruntime.InferenceSession(self.model_path)
+        self.input_name = self.model.get_inputs()[0].name
+        self.output_name = self.model.get_outputs()[0].name
     
     def __call__(self, images):
         images = images.detach().cpu().numpy().transpose(0,2,3,1)
         norm = ((images) - 0.5) / 0.5
         tensor = norm.transpose(0,3,1,2).astype(np.float32)
-        embeddings = self.adaface_model.run([self.output_name], {self.input_name: tensor})[0]
+        embeddings = self.model.run([self.output_name], {self.input_name: tensor})[0]
 
         return embeddings
     
@@ -84,8 +87,30 @@ def load_model(name: str):
         return ArcFace()
     elif name == 'adaface':
         return AdaFace()
+    elif name == 'adaface_onnx':
+        model = AdaFace()
+        return onnx.load(model.model_path)
     elif name == 'ghostfacenet':
         return GhostFaceNet()
     else:
         raise ValueError(f'Model {name} not supported')
 
+# model = load_model('ghostfacenet')
+# for i, layer in enumerate(model.model.children()):
+#     print(f"Layer {i}: {layer}")
+
+# model = load_model('facenet')
+# for i, layer in enumerate(model.model.children()):
+#     print(f"Layer {i}: {layer}")
+
+# model = load_model('adaface_onnx')
+# for node in model.graph.node:
+#     print(f"Name: {node.name}, OpType: {node.op_type}, Inputs: {node.input}, Outputs: {node.output}")
+
+onnx_model = load_model('adaface_onnx')
+pytorch_model = convert(onnx_model)
+print(pytorch_model)
+# Fine-tune the PyTorch model
+# import torch
+# import torch.nn as nn
+# import torch.optim as optim

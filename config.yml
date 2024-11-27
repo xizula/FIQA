@@ -1,11 +1,20 @@
 data:
   # path: 'mgr_data/MS1M_small'
-  path: 'mgr_data/CasiaWebFace_small'
-  # path: 'mgr_data/LFW'
+  # path: 'mgr_data/IJBC_cut'
+  # path: 'D:/Projekt/data/datasets/eval_front_images'
+  path: 'mgr_data/LFW'
   # path: 'mgr_data/data_sample'
   test_data: 'mgr_data/MS1M_small'
   test_embeddings: 'mgr_data/embeddings/adaface_LFW_embeddings.csv'
   # test_embeddings: 'mgr_data/embeddings/adaface_data_sample_embeddings.csv'
+test_datasets:
+  - LFW
+#   - IJBC_cut
+
+# test_datasets:
+#   - eval_front_images
 model:
-  embeddings: adaface 
-  quality_model: facenet
+  # - adaface
+  # - arcface
+  # - facenet
+  - ghostfacenet
