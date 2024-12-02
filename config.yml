@@ -9,12 +9,12 @@ data:
   # test_embeddings: 'mgr_data/embeddings/adaface_data_sample_embeddings.csv'
 test_datasets:
   - LFW
-#   - IJBC_cut
+  - IJBC_cut
 
 # test_datasets:
 #   - eval_front_images
 model:
-  # - adaface
-  # - arcface
-  # - facenet
+  - adaface
+  - arcface
+  - facenet
   - ghostfacenet

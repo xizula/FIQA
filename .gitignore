@@ -4,4 +4,6 @@ venv
 wvenv
 face_models/models/*
 *.onnx
-*.ipynb
+# *.ipynb
+*__pycache__
+face_models\__pycache__

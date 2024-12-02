@@ -8,11 +8,12 @@ import onnxruntime
 from insightface.model_zoo import get_model
 import numpy as np
 import torch
-from ellzaf_ml.models import GhostFaceNetsV2
+from ellzaf_ml.models import GhostFaceNetsV2, GhostFaceNetsV1
 from torchvision.io import read_image
 from numpy.linalg import norm
 import onnx
 from onnx2torch import convert
+from torch import nn
 
 class FaceNet:
     def __init__(self):
@@ -32,8 +33,8 @@ class FaceNet:
 
 class ArcFace:
     def __init__(self):
-        self.arcface_model = get_model('buffalo_l', allow_download=True, download_zip=True)
-        self.arcface_model.prepare(ctx_id=0)
+        self.model = get_model('buffalo_l', allow_download=True, download_zip=True)
+        self.model.prepare(ctx_id=0)
 
     def __call__(self, images):
         emb = []
@@ -41,7 +42,7 @@ class ArcFace:
             cv2.imwrite('temp.jpg', (img.detach().cpu().numpy().transpose(1, 2, 0)*255))
             img = img.detach().cpu().numpy().transpose(1, 2, 0)*255
             
-            embeddings = self.arcface_model.get_feat(img)
+            embeddings = self.model.get_feat(img)
             emb.append(embeddings)
         return torch.tensor(emb)
 
@@ -69,16 +70,30 @@ class AdaFace:
 
 class GhostFaceNet:
     def __init__(self):
-        self.model = GhostFaceNetsV2(image_size=112, width=1, dropout=0.)
+        self.model = GhostFaceNetsV1(image_size=112, width=1, dropout=0.)
         self.model.eval()
         self.model.cuda()
-
     def __call__(self, images):
-        return self.model(images).detach().cpu().numpy()
-
+        return self.model(images.float()).detach().cpu().numpy()
     def compute_similarities(self, e_i, e_j):
-        return np.dot(e_i, e_j.T) / (np.linalg.norm(e_i) * np.linalg.norm(e_j))*100
+        return np.dot(e_i, e_j) / (np.linalg.norm(e_i) * np.linalg.norm(e_j))
 
+
+class QualityFaceNet(nn.Module):
+    def __init__(self):
+        super(QualityFaceNet, self).__init__()
+        self.model = load_model('facenet')
+        self.features = nn.Sequential(*list(self.model.model.children())[:-4]).cuda()
+        self.dropout = nn.Dropout(p=0.5).cuda()
+        self.fc = nn.Linear(1792, 1).cuda()
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)  # Flatten before the fully connected layer
+        x = self.dropout(x)
+        x = self.fc(x)
+        return x
+    
 
 def load_model(name: str):
     if name == 'facenet':
@@ -107,10 +122,8 @@ def load_model(name: str):
 # for node in model.graph.node:
 #     print(f"Name: {node.name}, OpType: {node.op_type}, Inputs: {node.input}, Outputs: {node.output}")
 
-onnx_model = load_model('adaface_onnx')
-pytorch_model = convert(onnx_model)
-print(pytorch_model)
-# Fine-tune the PyTorch model
-# import torch
-# import torch.nn as nn
-# import torch.optim as optim
+# onnx_model = load_model('adaface_onnx')
+# pytorch_model = convert(onnx_model)
+# print(pytorch_model)
+
+
