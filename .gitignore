@@ -8,3 +8,6 @@ face_models/models/*
 *__pycache__
 face_models/__pycache__
  dataset/__pycache__
+*.pth
+log
+*.pkl
