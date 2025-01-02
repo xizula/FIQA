@@ -6,7 +6,7 @@ import os
 from tqdm import tqdm
 import random
 import ast
-
+np.random.seed(42)
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.append(parent_dir)
 

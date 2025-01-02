@@ -18,3 +18,5 @@ model:
   - arcface
   - facenet
   - ghostfacenet
+
+quality_model: facenet

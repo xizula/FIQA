@@ -14,6 +14,9 @@ from numpy.linalg import norm
 import onnx
 from onnx2torch import convert
 from torch import nn
+torch.manual_seed(42)
+np.random.seed(42)
+
 
 class FaceNet:
     def __init__(self):

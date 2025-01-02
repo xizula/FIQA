@@ -4,7 +4,6 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')
 print(parent_dir)
 os.environ['PYTHONPATH'] = parent_dir
 sys.path.append(parent_dir)
-
 import itertools
 import pandas as pd
 import yaml
@@ -13,6 +12,8 @@ from tqdm import tqdm
 import torch
 from face_models.model import load_model
 import numpy as np
+torch.manual_seed(42)
+np.random.seed(42)
 
 config = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 

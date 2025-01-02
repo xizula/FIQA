@@ -13,6 +13,7 @@ import json
 from tqdm import tqdm
 import pickle
 
+np.random.seed(42)
 
 config = yaml.load(open('config.yml'), Loader=yaml.FullLoader)
 

@@ -9,7 +9,12 @@ import pandas as pd
 import numpy as np
 from PIL import Image
 from torch.utils.data import random_split
-
+import torchvision
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)  # Suppress user warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+torch.manual_seed(42)
+np.random.seed(42)
 
 class FaceRecoDataset(datasets.ImageFolder):
     def __init__(self, root, transform=None, folder_mapping=None):
@@ -54,11 +59,12 @@ class QualityDataset(Dataset):
         self.batch_size = batch_size
         data = pd.read_csv(self.img_list)
         self.imgPath = data['path'].values
-        self.target = data['label'].values
+        self.target = data['quality'].values
 
     def __getitem__(self, index):
         imgPath = self.imgPath[index]
-        img = Image.open(imgPath)                                          
+        # img = Image.open(imgPath)
+        img = torchvision.io.read_image(imgPath).float()                                   
         target = self.target[index]
         return imgPath, img, target
 
@@ -66,9 +72,8 @@ class QualityDataset(Dataset):
         return(len(self.imgPath))
 
 
-def load_quality_data(img_list, batch_size, pin_memory, num_workers, train=False, split_ratio=0.85):
-    torch.manual_seed(42)
-    img_list = img_list # csv z pseudo-labelkami
+def load_quality_data(img_list, batch_size=32, pin_memory=True, num_workers=4, split_ratio=0.85):
+
     dataset = QualityDataset(img_list=img_list, batch_size=batch_size)
     
     train_size = int(split_ratio * len(dataset))

@@ -6,4 +6,5 @@ face_models/models/*
 *.onnx
 # *.ipynb
 *__pycache__
-face_models\__pycache__
+face_models/__pycache__
+ dataset/__pycache__
