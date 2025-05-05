@@ -1,3 +1,9 @@
+import os
+import sys
+parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+os.environ['PYTHONPATH'] = parent_dir
+sys.path.append(parent_dir)
+
 from facenet_pytorch import MTCNN, InceptionResnetV1
 from insightface.model_zoo import get_model
 import torch
@@ -14,6 +20,13 @@ from numpy.linalg import norm
 import onnx
 from onnx2torch import convert
 from torch import nn
+import onnx
+import onnx.helper as helper
+import onnx.shape_inference as shape_inference
+from onnx2pytorch import ConvertModel
+import onnxruntime as ort
+from face_models.models.AdaFace.inference import load_pretrained_model
+
 torch.manual_seed(42)
 np.random.seed(42)
 
@@ -52,23 +65,48 @@ class ArcFace:
     def compute_similarities(self, e_i, e_j):
         return np.dot(e_i, e_j.T) / (norm(e_i) * norm(e_j)) *100
 
+
 class AdaFace:
-    def __init__(self):
-        self.model_path = "face_models/models/adaface.onnx"
-        self.model = onnxruntime.InferenceSession(self.model_path)
-        self.input_name = self.model.get_inputs()[0].name
-        self.output_name = self.model.get_outputs()[0].name
-    
+    def __init__(self, train=False):
+        self.model = load_pretrained_model('ir_101')
+        self.model.eval()
+        self.model.cuda()
+        self.train = train
+
     def __call__(self, images):
         images = images.detach().cpu().numpy().transpose(0,2,3,1)
         norm = ((images) - 0.5) / 0.5
-        tensor = norm.transpose(0,3,1,2).astype(np.float32)
-        embeddings = self.model.run([self.output_name], {self.input_name: tensor})[0]
-
-        return embeddings
+        tensor = torch.tensor(norm.transpose(0,3,1,2)).float()
+        if not self.train:
+          with torch.no_grad():
+            embeddings, _ = self.model(tensor.cuda())
+        else:
+            embeddings, _ = self.model(tensor.cuda())
+        return embeddings.detach().cpu()
     
     def compute_similarities(self, e_i, e_j):
         return e_i @ e_j.T
+
+class AdaFaceQuality:
+    def __init__(self, adaface_model, train_data_embeddings):
+        self.adaface = adaface_model
+        self.train_mean = train_data_embeddings.mean(dim=0)
+        self.train_var = train_data_embeddings.var(dim=0)
+        self.criterion = torch.nn.MSELoss()
+    
+    def compute_quality(self, images):
+        embeddings = self.adaface(images)
+        embeddings.requires_grad_(True)  # Enable gradient tracking
+
+        batch_mean = embeddings.mean(dim=0)
+        batch_var = embeddings.var(dim=0)
+
+        mse_loss = self.criterion(batch_mean, self.train_mean) + self.criterion(batch_var, self.train_var)
+
+        mse_loss.backward()
+        gradients = embeddings.grad.abs().sum(dim=1)
+
+        return gradients.detach().cpu().numpy()
 
 
 class GhostFaceNet:
@@ -98,13 +136,33 @@ class QualityFaceNet(nn.Module):
         return x
     
 
-def load_model(name: str):
+class QualityAdaFace(nn.Module):
+    def __init__(self, **kwargs):
+        super(QualityAdaFace, self).__init__()
+        original_model = load_model('adaface', **kwargs)
+        self.input_layer = original_model.model.input_layer
+        self.body = original_model.model.body
+        
+        # Add new layers: dropout and a fully connected layer
+        self.dropout = nn.Dropout(p=0.5)
+        self.fc = nn.Linear(512, 1).cuda()  # Assuming 512 features from the body
+        
+    def forward(self, x):
+        x = self.input_layer(x)
+        x = self.body(x)
+        x = x.mean(dim=(2, 3))  # Global average pooling
+        x = self.dropout(x)
+        x = self.fc(x)
+        return x
+    
+def load_model(name: str, **kwargs):
+
     if name == 'facenet':
         return FaceNet()
     elif name == 'arcface':
         return ArcFace()
     elif name == 'adaface':
-        return AdaFace()
+        return AdaFace(train=kwargs.get('train', False))
     elif name == 'adaface_onnx':
         model = AdaFace()
         return onnx.load(model.model_path)
@@ -113,20 +171,10 @@ def load_model(name: str):
     else:
         raise ValueError(f'Model {name} not supported')
 
-# model = load_model('ghostfacenet')
-# for i, layer in enumerate(model.model.children()):
-#     print(f"Layer {i}: {layer}")
 
-# model = load_model('facenet')
-# for i, layer in enumerate(model.model.children()):
-#     print(f"Layer {i}: {layer}")
+# model = load_model('adaface')
+# print(model.model)
 
-# model = load_model('adaface_onnx')
-# for node in model.graph.node:
-#     print(f"Name: {node.name}, OpType: {node.op_type}, Inputs: {node.input}, Outputs: {node.output}")
 
-# onnx_model = load_model('adaface_onnx')
-# pytorch_model = convert(onnx_model)
-# print(pytorch_model)
 
 

@@ -92,10 +92,10 @@ def norm_labels(distances: dict, id_score: dict) -> dict:
     return quality_scores
 
 if __name__ == '__main__':
-    data = pd.read_csv('mgr_data/embeddings/ghostfacenet_CasiaWebFace_small_embeddings.csv')
+    data = pd.read_csv('mgr_data/embeddings/adaface_CasiaWebFace_small_embeddings.csv')
     qc = []
     ids = sorted(data['label'].unique())
-    for _ in range(REPEATS):
+    for i in range(REPEATS):
         same_sim, num_pairs = same_ppl_sim(data, ids)
         diff_sim = diff_ppl_sim(data)
         distances = gen_distance(same_sim, diff_sim)
@@ -104,11 +104,11 @@ if __name__ == '__main__':
         qc.append(quality_scores)
         qc_mean = np.mean(qc, axis=0)
         qc_data = pd.DataFrame({'path': list(distances.keys()), 'quality': qc_mean})
-        qc_data.to_csv('arcface_CasiaWebFace_small_quality.csv', index=False)
+        qc_data.to_csv(f'adaface_CasiaWebFace_small_quality_{i}.csv', index=False)
 
     qc = np.mean(qc, axis=0)
     qc_data = pd.DataFrame({'path': list(distances.keys()), 'quality': qc})
-    qc_data.to_csv('ghostfacenet_CasiaWebFace_small_quality.csv', index=False)
+    qc_data.to_csv('adaface_CasiaWebFace_small_quality.csv', index=False)
 
 
 

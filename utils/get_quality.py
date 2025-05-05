@@ -9,21 +9,23 @@ import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 
-from face_models.model import QualityFaceNet
+from face_models.model import QualityFaceNet, QualityAdaFace
 torch.manual_seed(42)
 np.random.seed(42)
 
 # change net
-model = QualityFaceNet()
+# model = QualityFaceNet()
+model = QualityAdaFace()
 # change checpoint
-checkpoint = torch.load('method/SDD_FIQA/checkpoints/facenet_net_20epoch.pth')
+checkpoint = torch.load('method/new_SDD/checkpoints/adaface/checkpoint_epoch_20.pth')
 # change image folder
 image_folder = Path("mgr_data/IJBC_cut")
+# image_folder = Path("mgr_data/LFW")
 
 model.load_state_dict(checkpoint)
 model.eval()
 
-output_csv = "method/SDD_FIQA/scores/valid/facenet_IJBC.csv"
+output_csv = "method/new_SDD/scores/test/adaface_IJBC.csv"
 
 results = []
 

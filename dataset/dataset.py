@@ -31,14 +31,16 @@ class FaceRecoDataset(datasets.ImageFolder):
     def get_folder_to_label_mapping(self):
         return {v: k for k, v in self.class_to_idx.items()}
 
-def get_dataset():
+def get_dataset(dataset_dir: str = None):
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
 
     with open('config.yml') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
-    dataset_dir = config['data']['path']
+    
+    if dataset_dir is None:
+        dataset_dir = config['data']['path']
 
     subfolders = sorted(os.listdir(dataset_dir))
     folder_to_label = {folder: idx for idx, folder in enumerate(subfolders)}
